@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M.E.G. Desensitization Simulation</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0a0a0a;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .terminal {
+            border: 1px solid #0f0;
+            padding: 25px;
+            max-width: 700px;
+            width: 100%;
+            background: #0a0a0a;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
+        }
+        h3 {
+            margin-bottom: 15px;
+            color: #0f0;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .status-line {
+            margin-bottom: 20px;
+            color: #0f0;
+        }
+        .progress-container {
+            margin: 20px 0;
+        }
+        .progress-label {
+            margin-bottom: 5px;
+        }
+        .progress-bar-bg {
+            background: #1a1a1a;
+            border: 1px solid #0f0;
+            padding: 2px;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            background: #0f0;
+            height: 20px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            text-align: right;
+            margin-top: 5px;
+            color: #ff0;
+            font-size: 0.9em;
+        }
+        .final-message {
+            color: #f00;
+            margin: 20px 0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.2em;
+            display: none;
+        }
+        .control-panel {
+            margin-top: 30px;
+            border-top: 1px dashed #0f0;
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        button:disabled {
+            opacity: 0.4;
+            border-color: #666;
+            color: #666;
+            cursor: not-allowed;
+        }
+        button:disabled:hover {
+            background: transparent;
+            color: #666;
+        }
+        .reset-link {
+            color: #0f0;
+            text-decoration: none;
+            font-size: 14px;
+            border-bottom: 1px dashed #0f0;
+        }
+        .reset-link:hover {
+            color: #fff;
+        }
+        /* 自定义弹窗遮罩层 */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .popup-box {
+            background: #0a0a0a;
+            border: 2px solid #f00;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            color: #f00;
+            font-family: 'Courier New', Courier, monospace;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+            position: relative;
+            animation: glitch 0.2s;
+        }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+            100% { transform: translate(0); }
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #f00;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .popup-source {
+            color: #ff0;
+        }
+        .popup-close {
+            cursor: pointer;
+            font-size: 20px;
+            color: #f00;
+        }
+        .popup-content {
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        .popup-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .popup-btn {
+            background: transparent;
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 5px 15px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .popup-btn:hover {
+            background: #f00;
+            color: #000;
+        }
+        /* 隐藏元素 */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="terminal">
+    <h3>+++ SIMULATION ACTIVE +++</h3>
+    <div class="status-line">
+        <strong>Cycle Duration:</strong> 24 Hours (Constant)<br>
+        <strong>Status:</strong> <span id="statusText">Awaiting initiation...</span>
+    </div>
+
+    <!-- 进度条区域 -->
+    <div id="progressArea" class="progress-container">
+        <div class="progress-label">PROGRESS:</div>
+        <div class="progress-bar-bg">
+            <div id="progressBar" class="progress-bar-fill"></div>
+        </div>
+        <div id="progressText" class="progress-text">0% - Initializing...</div>
+    </div>
+
+    <!-- 最终信息区域（初始隐藏） -->
+    <div id="finalMessage" class="final-message">
+        SIMULATION COMPLETE · PROGRESS IRRELEVANT
+    </div>
+
+    <!-- 事件日志（只显示已经弹出的信息，作为记录） -->
+    <div style="margin: 25px 0 10px; color: #666; font-size: 0.9em;">
+        <div>EVENT LOG (auto-recorded):</div>
+        <div id="eventLog" style="margin-top: 8px; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="control-panel">
+        <button id="startBtn">▶ INITIATE SIMULATION</button>
+        <a href="#" id="resetLink" class="reset-link">⟲ RESET</a>
+    </div>
+    <div style="margin-top: 15px; color: #666; font-size: 0.85em;" id="hintText">
+        [ Press INITIATE to begin automated sequence ]
+    </div>
+</div>
+
+<!-- 自定义弹窗模板 -->
+<div id="popupTemplate" class="popup-overlay hidden">
+    <div class="popup-box">
+        <div class="popup-header">
+            <span class="popup-source" id="popupSource"></span>
+            <span class="popup-close" id="popupClose">&times;</span>
+        </div>
+        <div class="popup-content" id="popupContent"></div>
+        <div class="popup-footer">
+            <button class="popup-btn" id="popupDismiss">DISMISS</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+
+        // 恶意事件数据
+        const events = [
+            { time: '04:17:01', source: 'UNKNOWN_NODE', text: 'See? It\'s starting to crash out.' },
+            { time: '04:17:05', source: 'MALICE_BOT', text: 'Nobody would even know if you died back here. :)' },
+            { time: '04:17:10', source: 'PRIVATE_MSG', text: 'Stop hiding in the pixels. We\'ve triangulated you.' },
+            { time: '04:17:15', source: 'EXTERNAL_VOICE', text: 'Get out. You never belonged here.' },
+            { time: '04:17:18', source: 'SYSTEM', text: 'CRITICAL ERROR: Rationality exceeds logical threshold.\nExecuting Remedial Protocol...\nFormatting Cognitive Sector...\nResident Consciousness Zeroed.\nERROR_CODE: :)' }
+        ];
+
+        // DOM 元素
+        const startBtn = document.getElementById('startBtn');
+        const resetLink = document.getElementById('resetLink');
+        const statusText = document.getElementById('statusText');
+        const progressArea = document.getElementById('progressArea');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const finalMessage = document.getElementById('finalMessage');
+        const eventLogDiv = document.getElementById('eventLog');
+        const hintText = document.getElementById('hintText');
+
+        // 弹窗元素
+        const popupOverlay = document.getElementById('popupTemplate');
+        const popupSource = document.getElementById('popupSource');
+        const popupContent = document.getElementById('popupContent');
+        const popupClose = document.getElementById('popupClose');
+        const popupDismiss = document.getElementById('popupDismiss');
+
+        // 状态变量
+        let simulationActive = false;
+        let currentEventIndex = 0;
+        let popupResolve = null; // 用于Promise控制弹窗关闭
+
+        // ---------- 弹窗逻辑 ----------
+        function showPopup(eventData) {
+            return new Promise((resolve) => {
+                popupSource.textContent = `<${eventData.source}> [${eventData.time}]`;
+                popupContent.innerHTML = eventData.text.replace(/\n/g, '<br>');
+                popupOverlay.classList.remove('hidden');
+                popupResolve = resolve;
+            });
+        }
+
+        function closePopup() {
+            popupOverlay.classList.add('hidden');
+            if (popupResolve) {
+                popupResolve();
+                popupResolve = null;
+            }
+        }
+
+        // 关闭弹窗的方式
+        popupClose.addEventListener('click', closePopup);
+        popupDismiss.addEventListener('click', closePopup);
+        popupOverlay.addEventListener('click', (e) => {
+            if (e.target === popupOverlay) closePopup();
+        });
+
+        // 将事件记录到日志区域
+        function logEventToScreen(eventData) {
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.borderLeft = '2px solid #f00';
+            logEntry.style.paddingLeft = '10px';
+            logEntry.innerHTML = `<span style="color:#ff0;">[${eventData.time}]</span> <strong>&lt;${eventData.source}&gt;:</strong> <span style="color:#f66;">${eventData.text.replace(/\n/g, '<br>')}</span>`;
+            eventLogDiv.appendChild(logEntry);
+            // 自动滚动到底部
+            eventLogDiv.scrollTop = eventLogDiv.scrollHeight;
+        }
+
+        // ---------- 自动序列 ----------
+        async function runSimulation() {
+            simulationActive = true;
+            startBtn.disabled = true;
+            hintText.innerHTML = '[ SIMULATION RUNNING · DO NOT INTERRUPT ]';
+            statusText.textContent = 'Network handshake in progress...';
+
+            // 第一步：进度条从 0% 跳到 18%，然后锁死
+            progressBar.style.width = '18%';
+            progressText.textContent = '18% - Protocol stalled. Manual intervention required.';
+            progressText.style.color = '#ff0';
+            statusText.textContent = 'Network Feed Unresponsive (STALLED)';
+
+            // 短暂延迟让用户看到进度变化
+            await new Promise(r => setTimeout(r, 800));
+
+            // 依次处理5个事件
+            for (let i = 0; i < events.length; i++) {
+                if (!simulationActive) break; // 如果被重置则中止
+
+                currentEventIndex = i + 1;
+                const ev = events[i];
+                
+                // 显示弹窗
+                await showPopup(ev);
+                
+                // 记录到屏幕日志
+                logEventToScreen(ev);
+                
+                // 进度条保持18%不变（锁死）
+                progressBar.style.width = '18%';
+                
+                // 弹窗之间短暂延迟，让用户有时间阅读日志
+                await new Promise(r => setTimeout(r, 300));
+            }
+
+            // 所有事件完成后
+            if (simulationActive) {
+                // 隐藏进度条区域，显示最终信息
+                progressArea.style.display = 'none';
+                finalMessage.style.display = 'block';
+                statusText.textContent = 'Simulation terminated.';
+                hintText.innerHTML = '[ SIMULATION COMPLETE · PRESS RESET TO RESTART ]';
+                startBtn.disabled = true;
+                simulationActive = false;
+            }
+        }
+
+        // ---------- 重置所有状态 ----------
+        function resetSimulation() {
+            // 如果正在运行，强制终止
+            simulationActive = false;
+            
+            // 关闭可能打开的弹窗
+            closePopup();
+            
+            // 重置进度条
+            progressBar.style.width = '0%';
+            progressText.textContent = '0% - Initializing...';
+            progressText.style.color = '#ff0';
+            progressArea.style.display = 'block';
+            finalMessage.style.display = 'none';
+            
+            // 重置状态文字
+            statusText.textContent = 'Awaiting initiation...';
+            hintText.innerHTML = '[ Press INITIATE to begin automated sequence ]';
+            
+            // 清空日志
+            eventLogDiv.innerHTML = '';
+            
+            // 启用开始按钮
+            startBtn.disabled = false;
+            
+            currentEventIndex = 0;
+        }
+
+        // ---------- 事件绑定 ----------
+        startBtn.addEventListener('click', () => {
+            if (simulationActive) return;
+            resetSimulation(); // 先清理干净（确保日志清空）
+            // 但 reset 会把进度条重置为 0%，并启用按钮，我们需要马上禁用并开始
+            startBtn.disabled = true;
+            runSimulation();
+        });
+
+        resetLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            resetSimulation();
+            // 如果模拟正在运行，resetSimulation 已将 simulationActive 置 false
+        });
+
+        // 初始化
+        resetSimulation();
+    })();
+</script>
+</body>
+</html>
